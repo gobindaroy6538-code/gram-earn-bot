@@ -420,6 +420,17 @@ async def already_done(update, context):
 
 
 def main():
+    import threading
+    from flask import Flask as FlaskApp
+    flask_app = FlaskApp(__name__)
+
+    @flask_app.route("/")
+    def home():
+        return "Bot is running!"
+
+    t = threading.Thread(target=lambda: flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000))))
+    t.daemon = True
+    t.start()
     app = Application.builder().token(BOT_TOKEN).build()
     withdraw_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(withdraw_start, pattern="^withdraw$")],
