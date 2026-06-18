@@ -1,6 +1,8 @@
 import random
 import logging
 import os
+import threading
+from flask import Flask as FlaskApp
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
@@ -19,6 +21,20 @@ REFERRAL_BONUS = 5
 
 db = Database()
 WITHDRAW_AMOUNT, WITHDRAW_METHOD, WITHDRAW_NUMBER = range(3)
+
+flask_app = FlaskApp(__name__)
+
+@flask_app.route("/")
+def home():
+    return "Gram Earn Bot is running!"
+
+@flask_app.route("/health")
+def health():
+    return "OK"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8000))
+    flask_app.run(host="0.0.0.0", port=port)
 
 
 async def send_captcha(update, context):
@@ -192,8 +208,7 @@ async def handle_screenshot(update, context):
     context.user_data.pop("pending_task_id", None)
     await update.message.reply_text(
         "✅ স্ক্রিনশট পাঠানো হয়েছে! অ্যাডমিন যাচাই করবেন।",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 মেনু", callback_data="menu")]])
-    )
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 মেনু", callback_data="menu")]]))
 
 
 async def approve_fb(update, context):
@@ -420,17 +435,10 @@ async def already_done(update, context):
 
 
 def main():
-    import threading
-    from flask import Flask as FlaskApp
-    flask_app = FlaskApp(__name__)
-
-    @flask_app.route("/")
-    def home():
-        return "Bot is running!"
-
-    t = threading.Thread(target=lambda: flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000))))
+    t = threading.Thread(target=run_flask)
     t.daemon = True
     t.start()
+
     app = Application.builder().token(BOT_TOKEN).build()
     withdraw_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(withdraw_start, pattern="^withdraw$")],
